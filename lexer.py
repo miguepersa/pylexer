@@ -1,4 +1,7 @@
 import ply.lex as lex
+import codecs
+import sys
+import os
 
 # Palabras reservadas del lenguaje
 reserved = {
@@ -110,7 +113,14 @@ def t_STRING(t):
     t.value = f"TkString({t.value})"
     return t
 
-# A string containing ignored characters (spaces and tabs)
+# Calcula la columna del token [token]
+#   data es la cadena de entrada
+#   token es una instancia de token
+def find_column(input, token):
+    line_start = input.rfind('\n', 0, token.lexpos) + 1
+    return (token.lexpos - line_start) + 1
+
+# String con los caracteres que se ignoran (espacios y tabs)
 t_ignore = " \t"
 
 # Error handling rule
@@ -118,36 +128,59 @@ def t_error(t):
     print("Illegal character '%s'" % t.value[0])
     t.lexer.skip(1)
 
+# Retorna un string del token [tk] en formato legible (segun las especificaciones)
+#   tk es una instancia de token.
 def prettyString(tk):
     if tk.type == "ID" and tk.value not in reserved and tk.type not in type_data:
         if tk.value == "false" or tk.value == "true":
-            return f"Tk{tk.value.capitalize()}" # Es constante booleana
+            s = f"Tk{tk.value.capitalize()}" # Es constante booleana
         else:
-            return f"TkId(\"{tk.value}\")"  # Es identificador de variable
+            s = f"TkId(\"{tk.value}\")"  # Es identificador de variable
     elif tk.type == "STRING" or tk.type == "TkNum":
-        return f"{tk.value}"
+        s = f"{tk.value}"
     else:
-        return f"{tk.type}"
-     
+        s = f"{tk.type}"
+    return f"{s} {tk.lineno} {find_column(data, tk)}"
+
+# Verifica la entrada, si hay error muestra el mensaje y termina con
+# la ejecucion del programa
+def input_check():
+    if len(sys.argv) < 2:
+        print("Error, no especifico el archivo del programa.")
+        sys.exit()
+    elif os.path.splitext(sys.argv[1])[1] != ".gcl":
+        print("Error, la extension del archivo no es .gcl")
+        sys.exit()
+
+# Tokenize
+def tokenize():
+    while True:
+        tok = lexer.token()
+        if not tok:
+            break      # No more input
+        print(prettyString(tok))
+
+# Codifica el archivo de entrada a utf-8 y retorna su contenido.
+def read_file():
+    fp = codecs.open(name_file, "r", "utf-8")
+    return fp.read()
+
+# Verificar parametro de entrada
+input_check()
+
+# Leer y codificar el archivo de entrada
+name_file = sys.argv[1]
+data = read_file()
+
 # Construir el lexer
 lexer = lex.lex()
 
-data = '''
-|[
-declare
-a, b, c : int;
-d, e, f : array[0..2]
-a := b + 3;
-print e
-// Esto es un comentario. Debe ser ignorado.
-]|
-'''
-# Give the lexer some input
+# Darle al lexer la entrada
 lexer.input(data)
 
 # Tokenize
-while True:
-    tok = lexer.token()
-    if not tok:
-        break      # No more input
-    print(prettyString(tok))
+tokenize()
+
+# Falta documentar
+# Verificar si falta algun token/palabra reservada
+# Caracter ilegal
