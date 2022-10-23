@@ -119,7 +119,7 @@ def t_error(t):
     t.lexer.skip(1)
 
 def prettyString(tk):
-    if tk.type == "ID" and not tk.value in reserved and tk.type not in type_data:
+    if tk.type == "ID" and tk.value not in reserved and tk.type not in type_data:
         if tk.value == "false" or tk.value == "true":
             return f"Tk{tk.value.capitalize()}" # Es constante booleana
         else:
