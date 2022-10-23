@@ -1,5 +1,6 @@
 import ply.lex as lex
 
+# Palabras reservadas del lenguaje
 reserved = {
     'declare' : 'TkDeclare',
     'if'      : 'TkIf',
@@ -7,10 +8,18 @@ reserved = {
     'for'     : 'TkFor',
     'rof'     : 'TkRof',
     'do'      : 'TkDo',
-    'od'      : 'TkOd'
+    'od'      : 'TkOd',
+    'print'   : 'TkPrint'
 }
 
-# List of token names.   This is always required
+# Tipos de datos en el lenguaje
+type_data = {
+    'int'   : 'TkInt',
+    'bool'  : 'TkBool',
+    'array' : 'TkArray'
+}
+
+# Lista con los nombres de los tokens
 tokens = [  
    'TkOBlock',
    'TkCBlock',
@@ -37,14 +46,16 @@ tokens = [
    'TkCBracket',
    'TkTwoPoints',
    'TkConcat',
-   'NUMBER',
+   'TkNum',
+   'COMMENT',
+   'STRING',
    'ID',
-] + list(reserved.values())
+] + list(reserved.values()) + list(type_data.values())
 
-# Regular expression rules for simple tokens
+# Reglas de expresiones regulares para literales
 t_TkOBlock    = r'\|\['
-t_TkCBlock    = r'\|\]'
-t_TkSoForth   = r'..'
+t_TkCBlock    = r'\]\|'
+t_TkSoForth   = r'\.\.'
 t_TkComma     = r','
 t_TkOpenPar   = r'\('
 t_TkClosePar  = r'\)'
@@ -63,20 +74,26 @@ t_TkGeq       = r'>='
 t_TkGreater   = r'>'
 t_TkEqual     = r'=='
 t_TkNEqual    = r'!='
-t_TkOBracket  = r'\{'
-t_TkCBracket  = r'\}'
+t_TkOBracket  = r'\['
+t_TkCBracket  = r'\]'
 t_TkTwoPoints = r':'
-t_TkConcat    = r'.'
+t_TkConcat    = r'\.'
 
 def t_ID(t):
     r'[a-zA-Z_][a-zA-Z_0-9]*'
-    t.type = reserved.get(t.value)    # Check for reserved words
-    return t
+    # Verificar si es palabra reservada o tipo de dato
+    if t.value in reserved:
+        t.type = reserved.get(t.value)
+        t.value = t.type
+    elif t.value in type_data:
+        t.type = type_data.get(t.value)
+        t.value = t.type
+    return t 
 
 # A regular expression rule with some action code
-def t_NUMBER(t):
+def t_TkNum(t):
     r'\d+'
-    t.value = int(t.value)    
+    t.value = f"{t.type}({int(t.value)})" 
     return t
 
 # Define a rule so we can track line numbers
@@ -84,24 +101,46 @@ def t_newline(t):
     r'\n+'
     t.lexer.lineno += len(t.value)
 
+def t_COMMENT(t):
+    r'//.*'
+    pass
+
+def t_STRING(t):
+    r'\".*?\"'
+    t.value = f"TkString({t.value})"
+    return t
+
 # A string containing ignored characters (spaces and tabs)
-t_ignore  = ' \t'
+t_ignore = " \t"
 
 # Error handling rule
 def t_error(t):
     print("Illegal character '%s'" % t.value[0])
     t.lexer.skip(1)
 
-# Build the lexer
+def prettyString(tk):
+    if tk.type == "ID" and not tk.value in reserved and tk.type not in type_data:
+        if tk.value == "false" or tk.value == "true":
+            return f"Tk{tk.value.capitalize()}" # Es constante booleana
+        else:
+            return f"TkId(\"{tk.value}\")"  # Es identificador de variable
+    elif tk.type == "STRING" or tk.type == "TkNum":
+        return f"{tk.value}"
+    else:
+        return f"{tk.type}"
+     
+# Construir el lexer
 lexer = lex.lex()
 
-#data = '''
-#if
-#(3 + 4 * 10
-#  + -20 *2)
-#'''
 data = '''
-\/
+|[
+declare
+a, b, c : int;
+d, e, f : array[0..2]
+a := b + 3;
+print e
+// Esto es un comentario. Debe ser ignorado.
+]|
 '''
 # Give the lexer some input
 lexer.input(data)
@@ -111,4 +150,4 @@ while True:
     tok = lexer.token()
     if not tok:
         break      # No more input
-    print(f'{tok.type} {tok.lexpos} {tok.lineno}')
+    print(prettyString(tok))
