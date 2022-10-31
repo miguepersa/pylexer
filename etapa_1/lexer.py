@@ -1,6 +1,7 @@
 import ply.lex as lex
-import codecs
+import regex
 import sys
+import re
 import os
 
 # Palabras reservadas del lenguaje
@@ -12,7 +13,10 @@ reserved = {
     'rof'     : 'TkRof',
     'do'      : 'TkDo',
     'od'      : 'TkOd',
-    'print'   : 'TkPrint'
+    'print'   : 'TkPrint',
+    'skip'    : 'TkSkip',
+    'in'      : 'TkIn',
+    'to'      : 'TkTo'
 }
 
 # Tipos de datos en el lenguaje
@@ -46,13 +50,13 @@ tokens = [
    'TkEqual',
    'TkNEqual',
    'TkGuard',
-   'Tk0Bracket',
+   'TkOBracket',
    'TkCBracket',
    'TkTwoPoints',
    'TkConcat',
    'TkNum',
+   'TkString',
    'COMMENT',
-   'STRING',
    'ID',
 ] + list(reserved.values()) + list(type_data.values())
 
@@ -79,7 +83,7 @@ t_TkGreater   = r'>'
 t_TkEqual     = r'=='
 t_TkNEqual    = r'!='
 t_TkGuard     = r'\[\]'
-t_Tk0Bracket  = r'\['
+t_TkOBracket  = r'\['
 t_TkCBracket  = r'\]'
 t_TkTwoPoints = r':'
 t_TkConcat    = r'\.'
@@ -115,18 +119,23 @@ def t_COMMENT(t):
     r'//.*'
     pass
 
-#Regla de expresion regular para identificadores de variables
-def t_STRING(t):
-    r'\".*?\"'
-    t.value = f"TkString({t.value})"
-    return t
+#Regla de expresion regular para string
+def t_TkString(t):
+    r'\"(\\.|[^\\"\n])*\"'
+    result = regex.findall(r'(?<=(?<!\\)(?:\\{2})*)"[^\\"]*(?:\\["\\n][^\\"]*)*"', t.value)
+    if (len(result)) != 0:
+        return t
+    else:
+        return t_error(t)
 
 #Regla para el manejo de errores
 def t_error(t):
-    global errores
-
-    errores = True
-    print(f"Error: Unexpected character \"{t.value[0]}\" in row {t.lineno}, column {find_column(data, t)}")
+    c = find_column(data, t)
+    errores.append(f"Error: Unexpected character \"{t.value[0]}\" in row {t.lineno}, column {c}")
+    if t.type == "TkString":
+        match = re.search(r'\\', t.value)
+        errores.append(f"Error: Unexpected character \"\\\" in row {t.lineno}, column {c + match.start()}")
+        errores.append(f"Error: Unexpected character \"{t.value[0]}\" in row {t.lineno}, column {c + len(t.value) - 1}")
     t.lexer.skip(1)
 
 def find_column(input, token):
@@ -154,7 +163,7 @@ def prettyString(tk):
             s = f"Tk{tk.value.capitalize()}" # Es constante booleana
         else:
             s = f"TkId(\"{tk.value}\")"  # Es identificador de variable
-    elif tk.type == "STRING" or tk.type == "TkNum":
+    elif tk.type == "TkNum":
         s = f"{tk.value}"
     else:
         s = f"{tk.type}"
@@ -162,7 +171,7 @@ def prettyString(tk):
 
 def input_check():
     """Verifica la entrada, si hay error muestra el mensaje y termina con la ejecucion del programa"""
-
+    
     if len(sys.argv) < 2:
         print("Error, no especifico el archivo del programa.")
         sys.exit()
@@ -189,25 +198,22 @@ def print_tokens(tokens):
                 a (list): Lista con los tokens reconocidos.
     '''
 
-    if not errores:
+    if len(errores) == 0:
         for tk in tokens:
             print(prettyString(tk))
-
-def read_file():
-    """Codifica el archivo de entrada a utf-8 y retorna su contenido."""
-
-    fp = codecs.open(name_file, "r", "utf-8")
-    return fp.read()
+    else:
+        for err in errores:
+            print(err)
 
 # Verificar parametro de entrada
 input_check()
 
-# Leer y codificar el archivo de entrada
-name_file = sys.argv[1]
-data = read_file()
+# Leer el archivo de entrada
+fp = open(sys.argv[1], 'r')
+data = fp.read()
 
 # Indica si no se reconoce algun caracter
-errores = False
+errores = []
 
 # Construir el lexer
 lexer = lex.lex()
@@ -217,3 +223,4 @@ lexer.input(data)
 
 # Tokenize
 tokenize()
+
