@@ -9,7 +9,7 @@ Linux:
 
 Windows: 
 
-- En caso de no tener activos los permisos de ejecución de scripts en Windows
+En caso de no tener activos los permisos de ejecución de scripts en Windows
 hay que ejecutar el siguiente comando:
 
     PS *\> Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
