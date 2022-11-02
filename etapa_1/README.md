@@ -12,7 +12,7 @@ Windows:
 - En caso de no tener activos los permisos de ejecución de scripts en Windows
 hay que ejecutar el siguiente comando:
 
-    PS *\*> Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+    PS *\> Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 
 y luego puede activarse el entorno virtual con:
 
