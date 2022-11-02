@@ -165,6 +165,8 @@ def prettyString(tk):
             s = f"TkId(\"{tk.value}\")"  # Es identificador de variable
     elif tk.type == "TkNum":
         s = f"{tk.value}"
+    elif tk.type == "TkString":
+        s = f"TkString({tk.value})"
     else:
         s = f"{tk.type}"
     return f"{s} {tk.lineno} {find_column(data, tk)}"
