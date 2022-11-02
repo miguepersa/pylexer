@@ -180,7 +180,7 @@ def input_check():
         sys.exit()
 
 def tokenize():
-    """Tokenize"""
+    """Genera los tokens del programa a partir de la entrada del lexer"""
 
     list_tk = []
     while True:
